@@ -10,7 +10,7 @@ WORKDIR /app
 
 # Instala dependências primeiro (cache de layer)
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copia o restante do código
 COPY . .

@@ -1,6 +1,6 @@
 // Script para rodar o bot uma vez e sair — usado pelo GitHub Actions
 require('dotenv').config();
-const monitor = require('./monitor');
+const monitor = require('../monitor');
 
 console.log('🤖 SA Games Monitor — Execução única (GitHub Actions)\n');
 

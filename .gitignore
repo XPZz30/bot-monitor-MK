@@ -1,18 +1,56 @@
+# Dependências
 node_modules/
+
+# Saída do bot (CSV gerado + logs)
 output/
+
+# Variáveis de ambiente com senhas
 .env
-*.log
-npm-debug.log*
+
+# Sistema
 .DS_Store
 Thumbs.db
+*.log
 
-# Arquivos CSV auxiliares locais (não do bot)
-Planilha auxiliar.csv
-part 1.csv
+# ─── Arquivos locais que NÃO são do bot ───────────────────────────────────────
 
-# Pasta de outro bot
+# Scripts Python auxiliares
+*.py
+
+# Arquivos de texto auxiliares
+*.txt
+!README.txt
+
+# Planilhas auxiliares
+planilha_automagico_nuvemshop.csv
+produtos_com_imagens.csv
+produtos_importacao.csv
+"Planilha auxiliar.csv"
+"part 1.csv"
+"part 2.csv"
+
+# JSONs de promoções (outro projeto)
+promocoes.json
+promocoes_30.json
+promocoes_primaria_25.json
+
+# Bots antigos
+bot_primaria_25.js
+bot_promocoes.js
+bot_promocoes_10.js
+bot_promocoes_30.js
+gerar_post_whatsapp.js
+
+# Outros arquivos
+LOGICA_SCRAPING.md
+*.sql
+*.xlsx
+*.md
+!README.md
+
+# Pasta de outro projeto
 BOTPSNPROMO/
 
-# Puppeteer cache
+# Cache do Puppeteer
 .local-chromium/
 .cache/puppeteer/

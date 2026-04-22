@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  sagames-monitor:
+    build: .
+    container_name: sagames-monitor
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persiste a planilha gerada entre restarts do container
+      - ./output:/app/output
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - SITEMAP_URL=https://mkgames2.lojavirtualnuvem.com.br/sitemap.xml
+      - MONITOR_CRON=0 * * * *
+      - BATCH_SIZE=8
+      - STOCK_IN_VALUE=10
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable

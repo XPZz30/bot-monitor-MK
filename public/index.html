@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SA Games — Monitor de Preços</title>
+  <meta name="description" content="Dashboard de monitoramento de preços e estoque SA Games" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Tokens ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #07090f;
+      --bg2:         #0d1117;
+      --card:        #111827;
+      --card-h:      #161f30;
+      --border:      rgba(255,255,255,0.06);
+      --border-h:    rgba(255,255,255,0.13);
+      --accent:      #6366f1;
+      --accent-dim:  rgba(99,102,241,0.12);
+      --accent-glow: rgba(99,102,241,0.35);
+      --green:       #10b981;
+      --green-dim:   rgba(16,185,129,0.12);
+      --red:         #ef4444;
+      --red-dim:     rgba(239,68,68,0.11);
+      --gold:        #f59e0b;
+      --gold-dim:    rgba(245,158,11,0.12);
+      --sky:         #38bdf8;
+      --sky-dim:     rgba(56,189,248,0.11);
+      --t1:          #f1f5f9;
+      --t2:          #94a3b8;
+      --t3:          #475569;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--t1);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Ambient glow */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 10% -10%,  rgba(99,102,241,.07) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90%  110%, rgba(16,185,129,.05) 0%, transparent 55%);
+    }
+
+    /* ── Progress bar ────────────────────────────────────────────── */
+    #scanProgress {
+      position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 9999;
+    }
+    #scanProgress.active::after {
+      content: '';
+      position: absolute; top: 0; left: -60%; width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, var(--accent), #8b5cf6, transparent);
+      animation: sweep 1.4s ease-in-out infinite;
+    }
+    @keyframes sweep { to { left: 100%; } }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(20px) saturate(160%);
+      background: rgba(7,9,15,.82);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner {
+      max-width: 1360px; margin: 0 auto;
+      padding: 0 2rem;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      box-shadow: 0 0 18px var(--accent-glow);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .logo-text h1 {
+      font-size: 17px; font-weight: 700; letter-spacing: -.3px;
+      background: linear-gradient(90deg,#fff,#94a3b8);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .logo-text p { font-size: 11px; color: var(--t3); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Status pill */
+    .status-pill {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 999px;
+      font-size: 12px; font-weight: 600; border: 1px solid;
+      transition: all .3s;
+    }
+    .status-pill .dot { width: 7px; height: 7px; border-radius: 50%; }
+    .status-pill[data-status="idle"]    { border-color:rgba(16,185,129,.35); color:var(--green); background:var(--green-dim); }
+    .status-pill[data-status="running"] { border-color:rgba(245,158,11,.4);  color:var(--gold);  background:var(--gold-dim); }
+    .status-pill[data-status="error"]   { border-color:rgba(239,68,68,.35);  color:var(--red);   background:var(--red-dim);  }
+    .status-pill[data-status="idle"]    .dot { background:var(--green); animation: pulse-g 2.5s infinite; }
+    .status-pill[data-status="running"] .dot { background:var(--gold);  animation: pulse-o 1s   infinite; }
+    .status-pill[data-status="error"]   .dot { background:var(--red); }
+    @keyframes pulse-g { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.5)} 50%{box-shadow:0 0 0 5px rgba(16,185,129,0)} }
+    @keyframes pulse-o { 0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.6)} 50%{box-shadow:0 0 0 5px rgba(245,158,11,0)} }
+
+    /* ── Main Container ──────────────────────────────────────────── */
+    main {
+      max-width: 1360px; margin: 0 auto;
+      padding: 2rem; position: relative; z-index: 1;
+    }
+
+    /* ── Stats Grid ──────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px; margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 22px 24px;
+      transition: all .25s; position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      opacity: 0; transition: opacity .3s;
+    }
+    .stat-card:hover { background: var(--card-h); transform: translateY(-2px); border-color: var(--border-h); }
+    .stat-card:hover::before { opacity: 1; }
+    .stat-card .s-icon { font-size: 22px; margin-bottom: 12px; }
+    .stat-card .s-label { font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--t3); margin-bottom: 6px; }
+    .stat-card .s-value { font-size: 26px; font-weight: 800; color: var(--t1); line-height: 1; }
+    .stat-card .s-sub   { font-size: 12px; color: var(--t3); margin-top: 6px; }
+
+    /* ── Action Buttons ──────────────────────────────────────────── */
+    .actions { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 22px; border-radius: 12px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      border: none; text-decoration: none; transition: all .2s;
+      white-space: nowrap;
+    }
+    .btn-scan {
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      color: #fff; box-shadow: 0 4px 16px var(--accent-glow);
+    }
+    .btn-scan:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 22px var(--accent-glow); }
+    .btn-scan:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-download {
+      background: linear-gradient(135deg, var(--green), #059669);
+      color: #fff; box-shadow: 0 4px 14px rgba(16,185,129,.28);
+    }
+    .btn-download:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,.38); }
+    .btn-ghost {
+      background: var(--card); color: var(--t2);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--card-h); color: var(--t1); }
+
+    /* ── Info / Error Banner ─────────────────────────────────────── */
+    .banner {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 20px; border-radius: 12px;
+      font-size: 13px; margin-bottom: 22px; border: 1px solid;
+    }
+    .banner-info  { background:var(--accent-dim); border-color:rgba(99,102,241,.25); color:#a5b4fc; }
+    .banner-error { background:var(--red-dim);    border-color:rgba(239,68,68,.3);   color:#fca5a5; }
+    .banner-warn  { background:var(--gold-dim);   border-color:rgba(245,158,11,.3);  color:#fcd34d; }
+
+    /* ── Section Header ──────────────────────────────────────────── */
+    .section-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; gap: 12px; flex-wrap: wrap;
+    }
+    .section-title { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .count-badge {
+      font-size: 12px; font-weight: 600;
+      padding: 2px 10px; border-radius: 999px;
+      background: var(--accent-dim); color: #a5b4fc;
+      border: 1px solid rgba(99,102,241,.28);
+    }
+
+    /* Filter chips */
+    .filters { display: flex; gap: 6px; flex-wrap: wrap; }
+    .fchip {
+      padding: 5px 13px; border-radius: 8px; font-size: 12px; font-weight: 500;
+      cursor: pointer; border: 1px solid var(--border);
+      background: var(--card); color: var(--t2); transition: all .2s;
+    }
+    .fchip.active, .fchip:hover {
+      background: var(--accent-dim); border-color: rgba(99,102,241,.4); color: #a5b4fc;
+    }
+
+    /* ── Update Cards ────────────────────────────────────────────── */
+    .updates-grid { display: flex; flex-direction: column; gap: 10px; }
+
+    .ucard {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 18px 22px;
+      transition: all .2s;
+      animation: fadeUp .35s ease both;
+    }
+    @keyframes fadeUp { from{ opacity:0; transform:translateY(10px) } to{ opacity:1; transform:none } }
+    .ucard:hover { background: var(--card-h); border-color: var(--border-h); }
+
+    .ucard-head {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      gap: 12px; margin-bottom: 12px;
+    }
+    .product-name { font-size: 14px; font-weight: 600; color: var(--t1); }
+    .product-slug { font-size: 11px; color: var(--t3); margin-top: 3px; font-family: monospace; }
+    .update-time  { font-size: 11px; color: var(--t3); white-space: nowrap; flex-shrink: 0; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 11px; border-radius: 8px; font-size: 12px; font-weight: 500;
+    }
+    .chip-price   { background:var(--sky-dim);   border:1px solid rgba(56,189,248,.22); color:var(--sky); }
+    .chip-stock-in  { background:var(--green-dim); border:1px solid rgba(16,185,129,.22); color:var(--green); }
+    .chip-stock-out { background:var(--red-dim);   border:1px solid rgba(239,68,68,.22);  color:var(--red); }
+
+    .chip .varlabel { font-size: 10px; opacity: .65; text-transform: uppercase; letter-spacing: .5px; }
+    .chip .from     { text-decoration: line-through; opacity: .45; }
+
+    /* ── Empty State ─────────────────────────────────────────────── */
+    .empty {
+      text-align: center; padding: 80px 40px; color: var(--t3);
+    }
+    .empty .e-icon { font-size: 60px; margin-bottom: 18px; }
+    .empty h3 { font-size: 18px; color: var(--t2); margin-bottom: 8px; }
+    .empty p  { font-size: 13px; }
+
+    /* ── Spinner ─────────────────────────────────────────────────── */
+    .loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 60px; color: var(--t3); }
+    .spinner {
+      width: 22px; height: 22px;
+      border: 3px solid rgba(255,255,255,.08); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to{ transform:rotate(360deg) } }
+
+    /* ── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      main { padding: 1rem; }
+      .header-inner { padding: 0 1rem; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .actions { flex-direction: column; }
+      .btn { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Progress bar de varredura -->
+  <div id="scanProgress"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">🎮</div>
+        <div class="logo-text">
+          <h1>SA Games Monitor</h1>
+          <p>Atualização de preços e estoque</p>
+        </div>
+      </div>
+      <div class="status-pill" id="statusPill" data-status="idle">
+        <div class="dot"></div>
+        <span id="statusText">Carregando...</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ── Stats ── -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="s-icon">🕐</div>
+        <div class="s-label">Última Varredura</div>
+        <div class="s-value" id="lastScan">—</div>
+        <div class="s-sub"  id="lastAgo">Ainda não executado</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-icon">🎮</div>
+        <div class="s-label">Produtos Verificados</div>
+        <div class="s-value" id="totalScanned">0</div>
+        <div class="s-sub">no último ciclo</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-icon">🔄</div>
+        <div class="s-label">Alterações Detectadas</div>
+        <div class="s-value" id="totalUpdated">0</div>
+        <div class="s-sub">no último ciclo</div>
+      </div>
+      <div class="stat-card">
+        <div class="s-icon">⏱️</div>
+        <div class="s-label">Duração</div>
+        <div class="s-value" id="lastDuration">—</div>
+        <div class="s-sub" id="cronSub">Agendamento automático</div>
+      </div>
+    </div>
+
+    <!-- ── Error Banner ── -->
+    <div class="banner banner-error" id="errorBanner" style="display:none">
+      <span>⚠️</span>
+      <span id="errorMsg"></span>
+    </div>
+
+    <!-- ── Buttons ── -->
+    <div class="actions">
+      <button class="btn btn-scan" id="btnScan" onclick="triggerScan()">
+        🔍 Varrer Agora
+      </button>
+      <a class="btn btn-download" id="btnDownload" href="/download">
+        ⬇️ Baixar Planilha Atualizada
+      </a>
+      <button class="btn btn-ghost" onclick="loadData()">
+        🔃 Atualizar
+      </button>
+    </div>
+
+    <!-- ── Info Banner ── -->
+    <div class="banner banner-info" id="infoBanner" style="display:none">
+      <span>ℹ️</span>
+      <span id="infoMsg"></span>
+    </div>
+
+    <!-- ── Updates Section ── -->
+    <div class="section-row">
+      <div class="section-title">
+        📋 Histórico de Alterações
+        <span class="count-badge" id="countBadge">0</span>
+      </div>
+      <div class="filters">
+        <button class="fchip active" onclick="setFilter('all',this)">Todos</button>
+        <button class="fchip"       onclick="setFilter('price',this)">💰 Preço</button>
+        <button class="fchip"       onclick="setFilter('stock',this)">📦 Estoque</button>
+      </div>
+    </div>
+
+    <div class="updates-grid" id="updatesGrid">
+      <div class="loading"><div class="spinner"></div><span>Carregando dados...</span></div>
+    </div>
+
+  </main>
+
+  <script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let currentFilter = 'all';
+  let allUpdates    = [];
+  let pollTimer     = null;
+
+  // ── Formatters ─────────────────────────────────────────────────────────────
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('pt-BR', {
+      day:'2-digit', month:'2-digit', year:'2-digit',
+      hour:'2-digit', minute:'2-digit'
+    });
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return '';
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1)  return 'agora mesmo';
+    if (m < 60) return `há ${m} min`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `há ${h}h ${m % 60}min`;
+    return `há ${Math.floor(h/24)} dia${Math.floor(h/24) > 1 ? 's' : ''}`;
+  }
+
+  function fmtPrice(v) {
+    if (!v && v !== 0) return '?';
+    const n = parseFloat(v);
+    if (isNaN(n)) return String(v);
+    return `R$&nbsp;${n.toFixed(2).replace('.',',')}`;
+  }
+
+  // ── Status UI ──────────────────────────────────────────────────────────────
+  function applyStatus(status, lastError) {
+    const pill    = document.getElementById('statusPill');
+    const txt     = document.getElementById('statusText');
+    const bar     = document.getElementById('scanProgress');
+    const btn     = document.getElementById('btnScan');
+    const errBnr  = document.getElementById('errorBanner');
+
+    pill.dataset.status = status;
+
+    if (status === 'running') {
+      txt.textContent = 'Varrendo…';
+      bar.classList.add('active');
+      btn.disabled = true;
+      btn.textContent = '⏳ Varrendo…';
+      errBnr.style.display = 'none';
+      startPolling();
+    } else if (status === 'error') {
+      txt.textContent = 'Erro';
+      bar.classList.remove('active');
+      btn.disabled = false;
+      btn.innerHTML = '🔍 Varrer Agora';
+      errBnr.style.display = 'flex';
+      document.getElementById('errorMsg').textContent =
+        `Erro no último ciclo: ${lastError || 'Verifique o console do servidor.'}`;
+      stopPolling();
+    } else {
+      txt.textContent = 'Ativo';
+      bar.classList.remove('active');
+      btn.disabled = false;
+      btn.innerHTML = '🔍 Varrer Agora';
+      errBnr.style.display = 'none';
+      stopPolling();
+    }
+  }
+
+  // ── Stats UI ───────────────────────────────────────────────────────────────
+  function applyStats(data) {
+    document.getElementById('lastScan').textContent   = fmtDate(data.lastRun);
+    document.getElementById('lastAgo').textContent    = data.lastRun
+      ? timeAgo(data.lastRun)
+      : 'Ainda não executado';
+    document.getElementById('totalScanned').textContent = data.totalScanned || 0;
+    document.getElementById('totalUpdated').textContent  = data.totalUpdated || 0;
+    document.getElementById('lastDuration').textContent  = data.lastDuration || '—';
+    document.getElementById('cronSub').textContent =
+      data.cronSchedule ? `Cron: ${data.cronSchedule}` : 'Agendamento automático';
+
+    const infoBnr = document.getElementById('infoBanner');
+    if (data.lastRun) {
+      infoBnr.style.display = 'flex';
+      document.getElementById('infoMsg').textContent =
+        `Último ciclo: ${data.totalScanned || 0} produtos verificados · ` +
+        `${data.totalUpdated || 0} alterações detectadas · ${timeAgo(data.lastRun)}`;
+    }
+  }
+
+  // ── Render Updates ─────────────────────────────────────────────────────────
+  function renderUpdates(updates) {
+    const grid  = document.getElementById('updatesGrid');
+    const badge = document.getElementById('countBadge');
+
+    const filtered = currentFilter === 'all'
+      ? updates
+      : updates.filter(u => u.changes.some(c => c.type === currentFilter));
+
+    badge.textContent = filtered.length;
+
+    if (!filtered.length) {
+      const label = currentFilter === 'price' ? 'de preço' : currentFilter === 'stock' ? 'de estoque' : '';
+      grid.innerHTML = `
+        <div class="empty">
+          <div class="e-icon">🔍</div>
+          <h3>Nenhuma alteração ${label} registrada</h3>
+          <p>Quando o bot detectar mudanças, elas aparecerão aqui em tempo real.</p>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map((item, idx) => {
+      const chipsHtml = item.changes.map(c => {
+        if (c.type === 'price') {
+          return `
+            <div class="chip chip-price">
+              💰 <span class="varlabel">${c.variation}</span>
+              <span class="from">${fmtPrice(c.from)}</span>
+              → <strong>${fmtPrice(c.to)}</strong>
+            </div>`;
+        }
+        const isIn = c.to && c.to.toLowerCase().includes('em estoque');
+        return `
+          <div class="chip ${isIn ? 'chip-stock-in' : 'chip-stock-out'}">
+            📦 <span class="varlabel">${c.variation}</span>
+            ${escHtml(c.from)} → <strong>${escHtml(c.to)}</strong>
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="ucard" style="animation-delay:${Math.min(idx * 25, 400)}ms">
+          <div class="ucard-head">
+            <div>
+              <div class="product-name">${escHtml(item.name || item.slug)}</div>
+              <div class="product-slug">${escHtml(item.slug)}</div>
+            </div>
+            <div class="update-time">${timeAgo(item.cycleDate)}</div>
+          </div>
+          <div class="chips">${chipsHtml}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  // ── Data Fetching ──────────────────────────────────────────────────────────
+  async function loadData() {
+    try {
+      const res  = await fetch('/api/updates');
+      const data = await res.json();
+
+      applyStatus(data.status, data.lastError);
+      applyStats(data);
+
+      allUpdates = data.recentUpdates || [];
+      renderUpdates(allUpdates);
+
+      // Se rodando, garante polling ativo
+      if (data.status === 'running') startPolling();
+
+    } catch (err) {
+      console.error('Erro ao carregar dados:', err);
+    }
+  }
+
+  // ── Scan Trigger ───────────────────────────────────────────────────────────
+  async function triggerScan() {
+    const btn = document.getElementById('btnScan');
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Iniciando…';
+
+    try {
+      const res  = await fetch('/api/scan', { method: 'POST' });
+      const data = await res.json();
+
+      if (data.success) {
+        applyStatus('running');
+        startPolling();
+        loadData();
+      } else {
+        alert(data.message || 'Não foi possível iniciar a varredura.');
+        btn.disabled = false;
+        btn.innerHTML = '🔍 Varrer Agora';
+      }
+    } catch {
+      alert('Erro de conexão com o servidor.');
+      btn.disabled = false;
+      btn.innerHTML = '🔍 Varrer Agora';
+    }
+  }
+
+  // ── Filter ─────────────────────────────────────────────────────────────────
+  function setFilter(f, el) {
+    currentFilter = f;
+    document.querySelectorAll('.fchip').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    renderUpdates(allUpdates);
+  }
+
+  // ── Polling ────────────────────────────────────────────────────────────────
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(loadData, 5000);
+  }
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  loadData();
+  // Refresh passivo a cada 30s quando não está em polling
+  setInterval(() => { if (!pollTimer) loadData(); }, 30000);
+  </script>
+</body>
+</html>

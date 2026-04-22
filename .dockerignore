@@ -1,0 +1,10 @@
+node_modules
+output
+.env
+.git
+*.log
+npm-debug.log*
+.DS_Store
+BOTPSNPROMO
+*.csv
+!planilha-de-importação-nuvem-sagames.csv

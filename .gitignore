@@ -1,25 +1,18 @@
-# Dependências do Node.js
 node_modules/
-
-# Variáveis de ambiente
+output/
 .env
-
-# Logs
 *.log
 npm-debug.log*
-
-# Sistema operacional
 .DS_Store
 Thumbs.db
 
-# IDEs
-.vscode/
-.idea/
-*.sublime-*
+# Arquivos CSV auxiliares locais (não do bot)
+Planilha auxiliar.csv
+part 1.csv
 
-# Temporários
-*.tmp
-*.temp
+# Pasta de outro bot
+BOTPSNPROMO/
 
-# Puppeteer
+# Puppeteer cache
 .local-chromium/
+.cache/puppeteer/

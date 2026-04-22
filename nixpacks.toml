@@ -1,0 +1,15 @@
+# Railway — SA Games Monitor
+# nixpacks.toml: instala Chromium no ambiente Railway (Linux)
+
+[phases.setup]
+nixPkgs = ["chromium", "nodejs_20"]
+
+[phases.install]
+cmds = ["npm ci --omit=dev"]
+
+[start]
+cmd = "node server.js"
+
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/nix/store/.../bin/chromium"

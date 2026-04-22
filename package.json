@@ -1,27 +1,24 @@
 {
-  "name": "bot-monitoramento-precos",
-  "version": "1.0.0",
-  "description": "Bot automatizado de monitoramento de preços e estoque para NuvemShop",
-  "main": "monitor.js",
+  "name": "sagames-monitor",
+  "version": "2.0.0",
+  "description": "Bot de monitoramento de preços e estoque — SA Games / Nuvemshop",
+  "main": "server.js",
   "scripts": {
-    "start": "node monitor.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "bot":   "node monitor.js",
+    "dev":   "node server.js"
   },
-  "keywords": [
-    "bot",
-    "scraper",
-    "puppeteer",
-    "monitoring",
-    "price-tracker"
-  ],
+  "keywords": ["bot", "scraper", "puppeteer", "monitoring", "nuvemshop"],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "axios": "^1.6.2",
-    "dotenv": "^16.3.1",
-    "proxy-agent": "^6.5.0",
-    "puppeteer": "^21.6.1",
-    "xml2js": "^0.6.2"
+    "axios":         "^1.6.2",
+    "csv-parse":     "^5.5.5",
+    "csv-stringify":  "^6.4.6",
+    "dotenv":        "^16.6.1",
+    "express":       "^4.18.2",
+    "node-cron":     "^4.2.1",
+    "puppeteer":     "^21.6.1",
+    "xml2js":        "^0.6.2"
   }
 }

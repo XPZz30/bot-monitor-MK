@@ -1,0 +1,17 @@
+import zipfile
+import xml.etree.ElementTree as ET
+
+xlsx_path = r'c:\Users\samul\OneDrive\Documents\Projetos\BotPreços\exemplo_pt-BR.xlsx'
+
+try:
+    with zipfile.ZipFile(xlsx_path, 'r') as z:
+        # Check sharedStrings.xml
+        with z.open('xl/sharedStrings.xml') as f:
+            tree = ET.parse(f)
+            root = tree.getroot()
+            # Shared strings are usually in <si><t>...
+            strings = [node.text for node in root.findall('.//{http://schemas.openxmlformats.org/spreadsheetml/2006/main}t')]
+            print("Strings found in sharedStrings.xml:")
+            print(strings[:50]) # Print first 50
+except Exception as e:
+    print(f"Error: {e}")

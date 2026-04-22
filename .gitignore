@@ -1,8 +1,10 @@
 # Dependências
 node_modules/
 
-# Saída do bot (CSV gerado + logs)
-output/
+# Saída do bot — ignora tudo exceto os arquivos finais
+output/*
+!output/planilha-atualizada.csv
+!output/updates.json
 
 # Variáveis de ambiente com senhas
 .env

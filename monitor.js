@@ -360,8 +360,19 @@ async function startMonitoringCycle() {
 
     await closeBrowser();
 
+    // === ADICIONA R$ 40 EM TODOS OS PRODUTOS ANTES DE SALVAR ===
+    for (let i = 1; i < records.length; i++) {
+      const row = records[i];
+      if (row && row[COL_PRECO]) {
+        const val = parseFloat(row[COL_PRECO]);
+        if (!isNaN(val)) {
+          row[COL_PRECO] = (val + 40).toFixed(2);
+        }
+      }
+    }
+
     // 5. Salva CSV atualizado
-    console.log('\n\n💾  Salvando planilha atualizada...');
+    console.log('\n\n💾  Salvando planilha atualizada (+R$ 40 em todos os itens)...');
     const csvOut = csvStringify(records, {
       delimiter: ';',
       record_delimiter: '\r\n',

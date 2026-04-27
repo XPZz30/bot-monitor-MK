@@ -367,7 +367,8 @@ async function startMonitoringCycle() {
       record_delimiter: '\r\n',
       quoted_string: true,
     });
-    fs.writeFileSync(OUT_CSV, csvOut, 'utf8');
+    // Adiciona o BOM (\uFEFF) para forçar o Excel e Nuvemshop a lerem como UTF-8
+    fs.writeFileSync(OUT_CSV, '\uFEFF' + csvOut, 'utf8');
     console.log(`✅  Planilha salva → output/planilha-atualizada.csv`);
 
     // 6. Salva histórico de atualizações

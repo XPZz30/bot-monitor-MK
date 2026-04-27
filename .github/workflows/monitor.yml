@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20     # Cancela se demorar mais que 20 min
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
       # 1. Baixa o código do repositório
       - name: 📥 Checkout
@@ -22,7 +25,7 @@ jobs:
       - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       # 3. Instala dependências (sem baixar o Chromium do Puppeteer — usa Chrome do sistema)

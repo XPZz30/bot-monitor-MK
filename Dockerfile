@@ -9,11 +9,11 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 WORKDIR /app
 
 # Instala dependências primeiro (cache de layer)
-COPY package*.json ./
+COPY --chown=pptruser:pptruser package*.json ./
 RUN npm install --omit=dev
 
 # Copia o restante do código
-COPY . .
+COPY --chown=pptruser:pptruser . .
 
 # Pasta de saída persistente (montar como volume no docker-compose)
 RUN mkdir -p output

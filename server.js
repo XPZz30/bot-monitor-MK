@@ -40,8 +40,17 @@ app.get('/download', (req, res) => {
     });
   }
   const mtime = fs.statSync(csvPath).mtime;
-  const date  = mtime.toISOString().slice(0, 10);
-  res.download(csvPath, `planilha-sagames-${date}.csv`);
+  
+  // Pega a data e hora (ex: 27/04/2026 14:30:00) e transforma em "27-04-2026_14h30m"
+  const mtimeSP = new Date(mtime.getTime() - (3 * 60 * 60 * 1000)); // Fuso do Brasil (-3h)
+  const d   = String(mtimeSP.getUTCDate()).padStart(2, '0');
+  const mo  = String(mtimeSP.getUTCMonth() + 1).padStart(2, '0');
+  const y   = mtimeSP.getUTCFullYear();
+  const h   = String(mtimeSP.getUTCHours()).padStart(2, '0');
+  const min = String(mtimeSP.getUTCMinutes()).padStart(2, '0');
+  
+  const nomePlanilha = `planilha-sagames_${d}-${mo}-${y}_${h}h${min}.csv`;
+  res.download(csvPath, nomePlanilha);
 });
 
 // ─── Iniciar ──────────────────────────────────────────────────────────────────

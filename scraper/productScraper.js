@@ -59,7 +59,16 @@ async function scrapeProduct(url) {
     );
 
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await page.waitForSelector('#price_display', { timeout: 8000 });
+    
+    // Tenta encontrar o preço. Se falhar (ex: página não existe, produto oculto), retorna sem erro.
+    const priceEl = await page.waitForSelector('#price_display', { timeout: 8000 }).catch(() => null);
+    if (!priceEl) {
+      return {
+        url,
+        primary: { price: null, stock: false },
+        secondary: { price: null, stock: false }
+      };
+    }
 
     // ── Variação Primária (já selecionada por padrão) ───────────────────────
     const [primaryPrice, primaryStockRaw] = await Promise.all([

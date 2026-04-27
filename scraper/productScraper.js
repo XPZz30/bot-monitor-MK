@@ -85,10 +85,29 @@ async function scrapeProduct(url) {
       .then(el => el !== null).catch(() => false);
 
     if (hasVariation) {
-      // Captura preço atual para detectar mudança após troca de variação
-      const priceBefore = primaryPrice;
+      // Procura a opção de secundária ignorando acentos e case (ex: "Secundária", "SECUNDARIA")
+      const optionFound = await page.evaluate(() => {
+        const select = document.querySelector('[data-variant-id="variation_1"]');
+        if (!select) return false;
+        
+        for (const option of select.options) {
+          const text = option.text.toLowerCase();
+          const val = option.value.toLowerCase();
+          if (text.includes('secund') || val.includes('secund')) {
+            select.value = option.value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+          }
+        }
+        return false;
+      });
 
-      await page.select('[data-variant-id="variation_1"]', 'SECUNDÁRIA');
+      if (!optionFound) {
+        // Se não tem opção secundária real, não faz sentido continuar essa variação
+        secondaryPrice = null;
+        secondaryStock = false;
+      } else {
+        const priceBefore = primaryPrice;
 
       // ✅ Espera o preço MUDAR no DOM — mais rápido que waitForTimeout fixo.
       // Se não mudar em 800ms (ex: variação sem preço diferente), continua mesmo assim.
@@ -107,6 +126,7 @@ async function scrapeProduct(url) {
       ]);
       secondaryPrice = secPrice;
       secondaryStock = secStockRaw.includes('comprar');
+      }
     }
 
     return {
